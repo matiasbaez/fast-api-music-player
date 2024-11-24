@@ -54,3 +54,8 @@ def upload_song(
     db.refresh(new_song)
 
     return new_song
+
+@router.get("/list")
+def get_songs(db: Session=Depends(get_db), user_dic: dict=Depends(auth_middleware)):
+    songs = db.query(Song).filter(Song.user_id == user_dic["uid"]).all()
+    return songs
