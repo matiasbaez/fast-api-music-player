@@ -1,9 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
 import uuid
 import bcrypt
+import jwt
 
 from pydantic_schemas.user_login import UserLogin
+from middleware.auth_middleware import auth_middleware
 from models.user import User
 from database import get_db
 
@@ -43,4 +45,16 @@ async def singnin_user(user: UserLogin, db: Session=Depends(get_db)):
     if not bcrypt.checkpw(user.password.encode('utf-8'), user_db.password):
         raise HTTPException(400, {"message": "User or password invalid"})
 
-    return user_db
+    token = jwt.encode({"id": str(user_db.id)}, "password_secret", algorithm="HS256")
+
+    return {"token": token, "user": user_db}
+
+@router.get("/")
+def current_user(db: Session=Depends(get_db), user_dic: dict=Depends(auth_middleware)):
+
+    user = db.query(User).filter(User.id == user_dic["uid"]).first()
+
+    if not user:
+        raise HTTPException(400, {"message": "User not found"})
+
+    return user
